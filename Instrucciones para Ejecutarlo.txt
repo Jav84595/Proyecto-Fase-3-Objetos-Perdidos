@@ -1,0 +1,5 @@
+Para ejecutar el programa se debe abrir gitbash en la carpeta raíz y ejecutar los siguientes comandos:
+
+mkdir -p bin
+javac -cp "lib/*" -d bin *.java
+java -cp "bin;lib/*" Main
