@@ -1,58 +1,147 @@
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
+import java.sql.SQLException;
 
 public class UsuarioController {
-    private ArrayList<Usuario> usuarios = new ArrayList<>();
-    private RegistroUsuarioView registroView;
-    private LoginView loginView;
+    private final UsuarioDAO usuarioDAO;
+    private final RegistroUsuarioView registroView;
+    private final LoginView loginView;
+    private Usuario usuarioActivo;
 
-    public UsuarioController(RegistroUsuarioView registroView, LoginView loginView) {
+    public UsuarioController(
+            UsuarioDAO usuarioDAO,
+            RegistroUsuarioView registroView,
+            LoginView loginView) {
+        this.usuarioDAO = usuarioDAO;
         this.registroView = registroView;
         this.loginView = loginView;
+
         registroView.agregarRegistroListener(e -> registrarDesdeVista());
         loginView.agregarLoginListener(e -> iniciarSesionDesdeVista());
+        loginView.agregarCerrarSesionListener(e -> cerrarSesionDesdeVista());
     }
 
-    public boolean registrarUsuario(String nombre, String usuario, String contrasena) {
-        if (nombre.isEmpty() || usuario.isEmpty() || contrasena.isEmpty()) {
+    public boolean registrarUsuario(String nombre, String nombreUsuario, String contrasena) {
+        if (!datosRegistroValidos(nombre, nombreUsuario, contrasena)) {
             return false;
         }
-        for (Usuario registrado : usuarios) {
-            if (registrado.getNombreUsuario().equalsIgnoreCase(usuario)) {
+
+        String nombreLimpio = nombre.trim();
+        String usuarioLimpio = nombreUsuario.trim();
+
+        try {
+            if (usuarioDAO.existeNombreUsuario(usuarioLimpio)) {
                 return false;
             }
+
+            Usuario usuario = new Usuario(
+                    nombreLimpio,
+                    usuarioLimpio,
+                    generarHash(contrasena)
+            );
+            return usuarioDAO.registrarUsuario(usuario);
+        } catch (SQLException e) {
+            System.err.println("Error al registrar usuario: " + e.getMessage());
+            return false;
         }
-        usuarios.add(new Usuario(nombre, usuario, generarHash(contrasena)));
-        return true;
     }
 
-    public boolean iniciarSesion(String usuario, String contrasena) {
-        String hash = generarHash(contrasena);
-        for (Usuario registrado : usuarios) {
-            if (registrado.getNombreUsuario().equalsIgnoreCase(usuario)
-                    && registrado.getContrasenaHash().equals(hash)) {
+    public boolean iniciarSesion(String nombreUsuario, String contrasena) {
+        if (nombreUsuario == null || nombreUsuario.trim().isEmpty()
+                || contrasena == null || contrasena.isEmpty()) {
+            return false;
+        }
+
+        try {
+            Usuario usuario = usuarioDAO.buscarPorNombreUsuario(nombreUsuario.trim());
+            if (usuario == null) {
+                return false;
+            }
+
+            if (usuario.getContrasenaHash().equals(generarHash(contrasena))) {
+                usuarioActivo = usuario;
                 return true;
             }
+        } catch (SQLException e) {
+            System.err.println("Error al iniciar sesión: " + e.getMessage());
         }
         return false;
     }
 
+    public void cerrarSesion() {
+        usuarioActivo = null;
+    }
+
+    public boolean haySesionActiva() {
+        return usuarioActivo != null;
+    }
+
+    public Usuario getUsuarioActivo() {
+        return usuarioActivo;
+    }
+
+    private boolean datosRegistroValidos(String nombre, String nombreUsuario, String contrasena) {
+        return nombre != null && !nombre.trim().isEmpty()
+                && nombreUsuario != null && !nombreUsuario.trim().isEmpty()
+                && contrasena != null && !contrasena.isEmpty();
+    }
+
     private void registrarDesdeVista() {
-        boolean registrado = registrarUsuario(registroView.getNombre(),
-                registroView.getNombreUsuario(), registroView.getContrasena());
-        registroView.mostrarMensaje(registrado
-                ? "Usuario registrado temporalmente."
-                : "Revise los datos o el nombre de usuario.");
-        if (registrado) {
+        String nombre = registroView.getNombre();
+        String nombreUsuario = registroView.getNombreUsuario();
+        String contrasena = registroView.getContrasena();
+
+        if (!datosRegistroValidos(nombre, nombreUsuario, contrasena)) {
+            registroView.mostrarMensaje("Todos los campos son obligatorios.");
+            return;
+        }
+
+        try {
+            if (usuarioDAO.existeNombreUsuario(nombreUsuario.trim())) {
+                registroView.mostrarMensaje("El nombre de usuario ya está registrado.");
+                return;
+            }
+        } catch (SQLException e) {
+            registroView.mostrarMensaje("Error al acceder a la base de datos.");
+            return;
+        }
+
+        if (registrarUsuario(nombre, nombreUsuario, contrasena)) {
+            registroView.mostrarMensaje("Usuario registrado correctamente.");
             registroView.limpiarCampos();
+        } else {
+            registroView.mostrarMensaje("No se pudo registrar el usuario.");
         }
     }
 
     private void iniciarSesionDesdeVista() {
-        boolean acceso = iniciarSesion(loginView.getNombreUsuario(), loginView.getContrasena());
-        loginView.mostrarMensaje(acceso ? "Inicio de sesión correcto." : "Credenciales incorrectas.");
+        String nombreUsuario = loginView.getNombreUsuario();
+        String contrasena = loginView.getContrasena();
+
+        if (nombreUsuario.isEmpty() || contrasena.isEmpty()) {
+            loginView.mostrarMensaje("Ingrese usuario y contraseña.");
+            return;
+        }
+
+        if (iniciarSesion(nombreUsuario, contrasena)) {
+            loginView.mostrarMensaje("Inicio de sesión correcto.");
+            loginView.mostrarSesionActiva(usuarioActivo.getNombreUsuario());
+            loginView.limpiarCampos();
+        } else {
+            loginView.mostrarMensaje("Credenciales incorrectas.");
+        }
+    }
+
+    private void cerrarSesionDesdeVista() {
+        if (!haySesionActiva()) {
+            loginView.mostrarMensaje("No hay una sesión activa.");
+            return;
+        }
+
+        cerrarSesion();
+        loginView.mostrarSesionCerrada();
+        loginView.mostrarMensaje("Sesión cerrada correctamente.");
     }
 
     private String generarHash(String texto) {
