@@ -5,16 +5,17 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JTextField;
+import javax.swing.WindowConstants;
 
 public class DevolucionView extends JFrame {
-    private JTextField txtObjetoId = new JTextField();
-    private JTextField txtPropietario = new JTextField();
-    private JTextField txtVerificacion = new JTextField();
-    private JButton btnDevolver = new JButton("Registrar devolución");
+    private final JTextField txtObjetoId = new JTextField();
+    private final JTextField txtPropietario = new JTextField();
+    private final JTextField txtVerificacion = new JTextField();
+    private final JButton btnDevolver = new JButton("Registrar devolución");
 
     public DevolucionView() {
         setTitle("Devolución de objeto");
-        setSize(400, 200);
+        setSize(420, 220);
         setLayout(new GridLayout(4, 2, 5, 5));
         add(new JLabel("ID del objeto:"));
         add(txtObjetoId);
@@ -24,7 +25,7 @@ public class DevolucionView extends JFrame {
         add(txtVerificacion);
         add(new JLabel());
         add(btnDevolver);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
     }
 
     public String getObjetoId() {

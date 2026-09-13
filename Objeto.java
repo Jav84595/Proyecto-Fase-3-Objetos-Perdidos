@@ -1,6 +1,9 @@
 import java.time.LocalDate;
 
 public class Objeto {
+    public static final String ESTADO_DISPONIBLE = "DISPONIBLE";
+    public static final String ESTADO_DEVUELTO = "DEVUELTO";
+
     private int id;
     private String nombre;
     private String descripcion;
@@ -10,44 +13,34 @@ public class Objeto {
 
     public Objeto(int id, String nombre, String descripcion, String lugarEncontrado,
             LocalDate fechaEncontrado) {
+        this(id, nombre, descripcion, lugarEncontrado, fechaEncontrado, ESTADO_DISPONIBLE);
+    }
+
+    public Objeto(int id, String nombre, String descripcion, String lugarEncontrado,
+            LocalDate fechaEncontrado, String estado) {
         this.id = id;
         this.nombre = nombre;
         this.descripcion = descripcion;
         this.lugarEncontrado = lugarEncontrado;
         this.fechaEncontrado = fechaEncontrado;
-        this.estado = "DISPONIBLE";
-    }
-
-    public int getId() {
-        return id;
-    }
-
-    public String getNombre() {
-        return nombre;
-    }
-
-    public String getDescripcion() {
-        return descripcion;
-    }
-
-    public String getLugarEncontrado() {
-        return lugarEncontrado;
-    }
-
-    public LocalDate getFechaEncontrado() {
-        return fechaEncontrado;
-    }
-
-    public String getEstado() {
-        return estado;
-    }
-
-    public void setEstado(String estado) {
         this.estado = estado;
     }
 
+    public int getId() { return id; }
+    public String getNombre() { return nombre; }
+    public String getDescripcion() { return descripcion; }
+    public String getLugarEncontrado() { return lugarEncontrado; }
+    public LocalDate getFechaEncontrado() { return fechaEncontrado; }
+    public String getEstado() { return estado; }
+    public void setEstado(String estado) { this.estado = estado; }
+
     @Override
     public String toString() {
-        return id + " - " + nombre + " - " + lugarEncontrado + " - " + estado;
+        return "ID: " + id
+                + " | Nombre: " + nombre
+                + " | Descripción: " + descripcion
+                + " | Lugar: " + lugarEncontrado
+                + " | Fecha: " + fechaEncontrado
+                + " | Estado: " + estado;
     }
 }
