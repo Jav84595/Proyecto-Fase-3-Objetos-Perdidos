@@ -1,64 +1,79 @@
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
 import java.util.List;
 
 public class ObjetoController {
-    private ArrayList<Objeto> objetos = new ArrayList<>();
+    private ObjetoDAO objetoDAO;
     private RegistroObjetoView registroView;
     private ConsultaObjetoView consultaView;
-    private int siguienteId = 1;
 
-    public ObjetoController(RegistroObjetoView registroView, ConsultaObjetoView consultaView) {
+    public ObjetoController(RegistroObjetoView registroView,
+            ConsultaObjetoView consultaView, ObjetoDAO objetoDAO) {
         this.registroView = registroView;
         this.consultaView = consultaView;
+        this.objetoDAO = objetoDAO;
         registroView.agregarRegistroListener(e -> registrarDesdeVista());
-        consultaView.agregarBusquedaListener(e ->
-                consultaView.mostrarObjetos(buscarObjetos(consultaView.getTextoBusqueda())));
+        consultaView.agregarBusquedaListener(e -> buscarDesdeVista());
+        consultaView.agregarConsultaListener(e -> consultarDesdeVista());
     }
 
     public boolean registrarObjeto(String nombre, String descripcion, String lugar, String fecha) {
-        if (nombre.isEmpty() || lugar.isEmpty()) {
-            return false;
-        }
+        if (!validarCampos(nombre, lugar, fecha)) return false;
         try {
             LocalDate fechaEncontrado = LocalDate.parse(fecha);
-            objetos.add(new Objeto(siguienteId++, nombre, descripcion, lugar, fechaEncontrado));
-            return true;
+            if (fechaEncontrado.isAfter(LocalDate.now())) return false;
+            Objeto objeto = new Objeto(0, nombre.trim(),
+                    descripcion == null ? "" : descripcion.trim(),
+                    lugar.trim(), fechaEncontrado);
+            return objetoDAO.guardar(objeto);
         } catch (DateTimeParseException e) {
             return false;
         }
     }
 
+    public List<Objeto> consultarObjetos() { return objetoDAO.consultarTodos(); }
+
     public List<Objeto> buscarObjetos(String texto) {
-        ArrayList<Objeto> encontrados = new ArrayList<>();
-        String criterio = texto.toLowerCase();
-        for (Objeto objeto : objetos) {
-            if (objeto.getNombre().toLowerCase().contains(criterio)
-                    || objeto.getLugarEncontrado().toLowerCase().contains(criterio)) {
-                encontrados.add(objeto);
-            }
-        }
-        return encontrados;
+        if (texto == null || texto.trim().isEmpty()) return consultarObjetos();
+        return objetoDAO.buscar(texto.trim());
     }
 
     public Objeto buscarPorId(int id) {
-        for (Objeto objeto : objetos) {
-            if (objeto.getId() == id) {
-                return objeto;
-            }
-        }
-        return null;
+        return id > 0 ? objetoDAO.buscarPorId(id) : null;
+    }
+
+    public boolean actualizarEstado(int id, String nuevoEstado) {
+        if (id <= 0 || nuevoEstado == null) return false;
+        String estado = nuevoEstado.trim().toUpperCase();
+        if (!estado.equals(Objeto.ESTADO_DISPONIBLE)
+                && !estado.equals(Objeto.ESTADO_DEVUELTO)) return false;
+        return buscarPorId(id) != null && objetoDAO.actualizarEstado(id, estado);
+    }
+
+    private boolean validarCampos(String nombre, String lugar, String fecha) {
+        return nombre != null && !nombre.trim().isEmpty()
+                && lugar != null && !lugar.trim().isEmpty()
+                && fecha != null && !fecha.trim().isEmpty();
     }
 
     private void registrarDesdeVista() {
         boolean registrado = registrarObjeto(registroView.getNombreObjeto(),
                 registroView.getDescripcion(), registroView.getLugar(), registroView.getFecha());
         registroView.mostrarMensaje(registrado
-                ? "Objeto registrado temporalmente."
-                : "Revise el nombre, lugar y formato de fecha.");
+                ? "Objeto registrado correctamente."
+                : "No se pudo registrar el objeto. Revise el nombre, lugar y fecha "
+                  + "(AAAA-MM-DD). La fecha no puede ser futura.");
         if (registrado) {
             registroView.limpiarCampos();
+            consultaView.mostrarObjetos(consultarObjetos());
         }
+    }
+
+    private void buscarDesdeVista() {
+        consultaView.mostrarObjetos(buscarObjetos(consultaView.getTextoBusqueda()));
+    }
+
+    private void consultarDesdeVista() {
+        consultaView.mostrarObjetos(consultarObjetos());
     }
 }
