@@ -6,12 +6,13 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
+import javax.swing.WindowConstants;
 
 public class RegistroUsuarioView extends JFrame {
-    private JTextField txtNombre = new JTextField();
-    private JTextField txtUsuario = new JTextField();
-    private JPasswordField txtContrasena = new JPasswordField();
-    private JButton btnRegistrar = new JButton("Registrar");
+    private final JTextField txtNombre = new JTextField();
+    private final JTextField txtUsuario = new JTextField();
+    private final JPasswordField txtContrasena = new JPasswordField();
+    private final JButton btnRegistrar = new JButton("Registrar");
 
     public RegistroUsuarioView() {
         setTitle("Registro de usuario");
@@ -25,7 +26,7 @@ public class RegistroUsuarioView extends JFrame {
         add(txtContrasena);
         add(new JLabel());
         add(btnRegistrar);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
     }
 
     public String getNombre() {
